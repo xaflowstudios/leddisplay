@@ -819,6 +819,43 @@ function SlidesTab() {
                         </span>
                       </label>
 
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`urgent-${slide.id}`} className="text-xs">
+                          Show now for
+                        </Label>
+                        <Input
+                          id={`urgent-${slide.id}`}
+                          type="number"
+                          min={0.5}
+                          step={0.5}
+                          inputMode="decimal"
+                          className="w-20"
+                          placeholder="5"
+                          value={overrideMinutes[slide.id] ?? ""}
+                          onChange={(e) =>
+                            setOverrideMinutes((prev) => ({ ...prev, [slide.id]: e.target.value }))
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">min</span>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={setOverride.isPending}
+                          onClick={() => {
+                            const seconds = toSeconds(overrideMinutes[slide.id] ?? "5", "minutes");
+                            if (!seconds) {
+                              toast.error("Enter how many minutes to show this image.");
+                              return;
+                            }
+                            setOverride.mutate({ id: slide.id, seconds });
+                          }}
+                        >
+                          Show now
+                        </Button>
+                      </div>
+
+
+
                       <div className="ml-auto flex items-center gap-2">
                         <Button
                           size="icon"
