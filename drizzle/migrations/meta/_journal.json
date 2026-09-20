@@ -29,6 +29,13 @@
       "when": 1789926817406,
       "tag": "0003_initial_signage_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789926843137,
+      "tag": "0004_function_grants",
+      "breakpoints": true
     }
   ]
 }
