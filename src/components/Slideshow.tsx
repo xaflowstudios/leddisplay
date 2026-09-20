@@ -185,12 +185,23 @@ export function Slideshow() {
           alt={slide.title}
           className={`absolute inset-0 h-full w-full ${fit}`}
           style={{
-            opacity: i === index ? 1 : 0,
+            opacity: !overrideActive && i === index ? 1 : 0,
             transition: `opacity ${transition}ms ease-in-out`,
           }}
           draggable={false}
         />
       ))}
+
+      {overrideSlide && (
+        <img
+          key={`override-${overrideSlide.id}`}
+          src={overrideSlide.src}
+          alt={overrideSlide.title}
+          className={`absolute inset-0 h-full w-full ${fit}`}
+          style={{ opacity: 1, transition: `opacity ${transition}ms ease-in-out` }}
+          draggable={false}
+        />
+      )}
 
       {settings?.show_clock && (
         <div className="absolute right-[3vw] bottom-[3vh] rounded-full bg-black/45 px-[1.6vw] py-[0.8vh] text-[2.2vh] font-display text-white/90 backdrop-blur-sm">
