@@ -124,19 +124,20 @@ export function Slideshow() {
     const seen = seenIdsRef.current;
     seenIdsRef.current = new Set(ids);
     if (!seen) return; // first playlist we ever received
+    if (overrideActive) return; // stay put while an urgent image is on screen
     const newIndex = ids.findIndex((id) => !seen.has(id));
     if (newIndex >= 0) setIndex(newIndex);
-  }, [slides, total]);
+  }, [slides, total, overrideActive]);
 
   // Advance on the current slide's own duration.
   useEffect(() => {
-    if (!current || !settings || paused || total < 2) return;
+    if (!current || !settings || paused || overrideActive || total < 2) return;
     const ms = durationFor(current, settings);
     timerRef.current = setTimeout(() => go(1), ms);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [current, settings, paused, total, go, index]);
+  }, [current, settings, paused, overrideActive, total, go, index]);
 
   // Preload the next image so a transition never shows a blank frame.
   useEffect(() => {
