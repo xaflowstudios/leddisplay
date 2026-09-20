@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_access_requests: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       display_settings: {
         Row: {
           default_duration_seconds: number
@@ -160,6 +184,9 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_primary_admin: { Args: { _user_id: string }; Returns: boolean }
+      primary_admin_id: { Args: never; Returns: string }
+      request_admin_access: { Args: never; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "display"

@@ -50,6 +50,13 @@
       "when": 1789926909456,
       "tag": "0006_slide_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789926940482,
+      "tag": "0007_primary_admin_and_access_requests",
+      "breakpoints": true
     }
   ]
 }
