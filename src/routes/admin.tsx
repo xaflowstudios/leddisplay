@@ -166,6 +166,24 @@ function AdminPage() {
     };
   }, [isPrimaryAdmin]);
 
+  // Live approval portal: images submitted by others show up without a refresh.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin-slides-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "slides" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["display"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "display_settings" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["display"] });
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isAdmin, queryClient]);
+
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
