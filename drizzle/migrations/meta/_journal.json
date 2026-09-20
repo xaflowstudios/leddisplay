@@ -22,6 +22,13 @@
       "when": 1789922005063,
       "tag": "0002_slide_approval",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789926817406,
+      "tag": "0003_initial_signage_schema",
+      "breakpoints": true
     }
   ]
 }

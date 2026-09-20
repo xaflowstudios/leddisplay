@@ -1,0 +1,118 @@
+DO $do$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace WHERE n.nspname = 'public' AND t.typname = 'app_role') THEN
+    CREATE TYPE public.app_role AS ENUM ('admin', 'display');
+  END IF;
+END
+$do$;
+
+CREATE TABLE IF NOT EXISTS public.user_roles (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  role public.app_role NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (user_id, role)
+);
+GRANT SELECT ON public.user_roles TO authenticated;
+GRANT ALL ON public.user_roles TO service_role;
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
+RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (SELECT 1 FROM public.user_roles WHERE user_id = _user_id AND role = _role)
+$$;
+
+DROP POLICY IF EXISTS "Users can read their own roles" ON public.user_roles;
+CREATE POLICY "Users can read their own roles" ON public.user_roles
+  FOR SELECT TO authenticated USING (user_id = auth.uid());
+DROP POLICY IF EXISTS "Admins can read all roles" ON public.user_roles;
+CREATE POLICY "Admins can read all roles" ON public.user_roles
+  FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE TABLE IF NOT EXISTS public.slides (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL DEFAULT '',
+  image_url text,
+  storage_path text,
+  duration_seconds integer,
+  position integer NOT NULL DEFAULT 0,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT ON public.slides TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.slides TO authenticated;
+GRANT ALL ON public.slides TO service_role;
+ALTER TABLE public.slides ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can view active slides" ON public.slides;
+CREATE POLICY "Anyone can view active slides" ON public.slides
+  FOR SELECT TO anon USING (is_active);
+DROP POLICY IF EXISTS "Signed in users can view slides" ON public.slides;
+CREATE POLICY "Signed in users can view slides" ON public.slides
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Admins can insert slides" ON public.slides;
+CREATE POLICY "Admins can insert slides" ON public.slides
+  FOR INSERT TO authenticated WITH CHECK (public.has_role(auth.uid(), 'admin'));
+DROP POLICY IF EXISTS "Admins can update slides" ON public.slides;
+CREATE POLICY "Admins can update slides" ON public.slides
+  FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+DROP POLICY IF EXISTS "Admins can delete slides" ON public.slides;
+CREATE POLICY "Admins can delete slides" ON public.slides
+  FOR DELETE TO authenticated USING (public.has_role(auth.uid(), 'admin'));
+
+CREATE TABLE IF NOT EXISTS public.display_settings (
+  id integer PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+  default_duration_seconds integer NOT NULL DEFAULT 600,
+  object_fit text NOT NULL DEFAULT 'cover',
+  transition_ms integer NOT NULL DEFAULT 800,
+  shuffle boolean NOT NULL DEFAULT false,
+  show_clock boolean NOT NULL DEFAULT false,
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+GRANT SELECT ON public.display_settings TO anon;
+GRANT SELECT, INSERT, UPDATE ON public.display_settings TO authenticated;
+GRANT ALL ON public.display_settings TO service_role;
+ALTER TABLE public.display_settings ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Anyone can view display settings" ON public.display_settings;
+CREATE POLICY "Anyone can view display settings" ON public.display_settings
+  FOR SELECT TO anon USING (true);
+DROP POLICY IF EXISTS "Signed in users can view display settings" ON public.display_settings;
+CREATE POLICY "Signed in users can view display settings" ON public.display_settings
+  FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "Admins can update display settings" ON public.display_settings;
+CREATE POLICY "Admins can update display settings" ON public.display_settings
+  FOR UPDATE TO authenticated USING (public.has_role(auth.uid(), 'admin')) WITH CHECK (public.has_role(auth.uid(), 'admin'));
+DROP POLICY IF EXISTS "Admins can insert display settings" ON public.display_settings;
+CREATE POLICY "Admins can insert display settings" ON public.display_settings
+  FOR INSERT TO authenticated WITH CHECK (public.has_role(auth.uid(), 'admin'));
+
+CREATE OR REPLACE FUNCTION public.touch_updated_at()
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
+BEGIN NEW.updated_at = now(); RETURN NEW; END; $$;
+DROP TRIGGER IF EXISTS slides_touch ON public.slides;
+CREATE TRIGGER slides_touch BEFORE UPDATE ON public.slides FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+DROP TRIGGER IF EXISTS settings_touch ON public.display_settings;
+CREATE TRIGGER settings_touch BEFORE UPDATE ON public.display_settings FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at();
+
+DROP POLICY IF EXISTS "Anyone can read signage images" ON storage.objects;
+CREATE POLICY "Anyone can read signage images" ON storage.objects
+  FOR SELECT USING (bucket_id = 'signage-images');
+DROP POLICY IF EXISTS "Admins can upload signage images" ON storage.objects;
+CREATE POLICY "Admins can upload signage images" ON storage.objects
+  FOR INSERT TO authenticated WITH CHECK (bucket_id = 'signage-images' AND public.has_role(auth.uid(), 'admin'));
+DROP POLICY IF EXISTS "Admins can update signage images" ON storage.objects;
+CREATE POLICY "Admins can update signage images" ON storage.objects
+  FOR UPDATE TO authenticated USING (bucket_id = 'signage-images' AND public.has_role(auth.uid(), 'admin'));
+DROP POLICY IF EXISTS "Admins can delete signage images" ON storage.objects;
+CREATE POLICY "Admins can delete signage images" ON storage.objects
+  FOR DELETE TO authenticated USING (bucket_id = 'signage-images' AND public.has_role(auth.uid(), 'admin'));
+
+INSERT INTO public.display_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO public.slides (title, image_url, duration_seconds, position, is_active)
+SELECT * FROM (VALUES
+  ('Campus quad', '/__l5e/assets-v1/edc8d274-4d37-4ba5-b55a-6975d5f2d287/01-campus-quad.jpg', 600, 1, true),
+  ('Lecture hall', '/__l5e/assets-v1/7ee13a3f-e84f-48d6-8510-2d16e2be66bf/02-lecture-hall.jpg', 600, 2, true),
+  ('Graduation event', '/__l5e/assets-v1/9aae336a-aeeb-4c15-88e5-fdd088ba82f7/03-graduation-event.jpg', 600, 3, true)
+) AS seed(title, image_url, duration_seconds, position, is_active)
+WHERE NOT EXISTS (SELECT 1 FROM public.slides);
