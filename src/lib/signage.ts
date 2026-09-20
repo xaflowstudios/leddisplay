@@ -48,6 +48,10 @@ export type DisplaySettings = {
   transition_ms: number;
   shuffle: boolean;
   show_clock: boolean;
+  /** Urgent image that temporarily takes over the screen, if any. */
+  override_slide_id?: string | null;
+  /** When that takeover ends. */
+  override_until?: string | null;
 };
 
 export type ResolvedSlide = Slide & { src: string };
@@ -103,6 +107,8 @@ export async function fetchDisplayData(onlyActive: boolean) {
       transition_ms: 800,
       shuffle: false,
       show_clock: false,
+      override_slide_id: null,
+      override_until: null,
     }) as DisplaySettings,
   };
 }

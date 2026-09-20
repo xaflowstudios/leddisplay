@@ -1,6 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { supabase } from "@/integrations/supabase/client";
 import {
   durationFor,
   fetchDisplayData,
@@ -28,6 +29,7 @@ function shuffled<T>(items: T[]) {
 }
 
 export function Slideshow() {
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["display", "public"],
     queryFn: async () => {
@@ -37,6 +39,22 @@ export function Slideshow() {
     refetchInterval: POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
   });
+
+  // Live updates, so an urgent image (or any playlist change) reaches the
+  // screen instantly instead of on the next poll.
+  useEffect(() => {
+    const refresh = () => {
+      void queryClient.invalidateQueries({ queryKey: ["display"] });
+    };
+    const channel = supabase
+      .channel("display-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "display_settings" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "slides" }, refresh)
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Re-checked on a short tick so a slide's scheduled start/end time takes
   // effect the moment it arrives, without waiting for the next server poll.
@@ -63,6 +81,25 @@ export function Slideshow() {
   const current = slides[index] ?? null;
   const total = slides.length;
 
+  // An urgent image can take over the screen for a chosen length of time. While
+  // it is up the normal slideshow (and its timer) stays completely paused.
+  const overrideUntilMs = settings?.override_until
+    ? new Date(settings.override_until).getTime()
+    : 0;
+  const [, setOverrideTick] = useState(0);
+  useEffect(() => {
+    const remaining = overrideUntilMs - Date.now();
+    if (remaining <= 0) return;
+    const t = setTimeout(() => setOverrideTick((n) => n + 1), remaining + 50);
+    return () => clearTimeout(t);
+  }, [overrideUntilMs]);
+
+  const overrideSlide =
+    overrideUntilMs > Date.now() && settings?.override_slide_id
+      ? (data?.slides.find((slide) => slide.id === settings.override_slide_id) ?? null)
+      : null;
+  const overrideActive = overrideSlide !== null;
+
   const go = useCallback(
     (step: number) => {
       setIndex((prev) => {
@@ -87,19 +124,20 @@ export function Slideshow() {
     const seen = seenIdsRef.current;
     seenIdsRef.current = new Set(ids);
     if (!seen) return; // first playlist we ever received
+    if (overrideActive) return; // stay put while an urgent image is on screen
     const newIndex = ids.findIndex((id) => !seen.has(id));
     if (newIndex >= 0) setIndex(newIndex);
-  }, [slides, total]);
+  }, [slides, total, overrideActive]);
 
   // Advance on the current slide's own duration.
   useEffect(() => {
-    if (!current || !settings || paused || total < 2) return;
+    if (!current || !settings || paused || overrideActive || total < 2) return;
     const ms = durationFor(current, settings);
     timerRef.current = setTimeout(() => go(1), ms);
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [current, settings, paused, total, go, index]);
+  }, [current, settings, paused, overrideActive, total, go, index]);
 
   // Preload the next image so a transition never shows a blank frame.
   useEffect(() => {
@@ -147,12 +185,23 @@ export function Slideshow() {
           alt={slide.title}
           className={`absolute inset-0 h-full w-full ${fit}`}
           style={{
-            opacity: i === index ? 1 : 0,
+            opacity: !overrideActive && i === index ? 1 : 0,
             transition: `opacity ${transition}ms ease-in-out`,
           }}
           draggable={false}
         />
       ))}
+
+      {overrideSlide && (
+        <img
+          key={`override-${overrideSlide.id}`}
+          src={overrideSlide.src}
+          alt={overrideSlide.title}
+          className={`absolute inset-0 h-full w-full ${fit}`}
+          style={{ opacity: 1, transition: `opacity ${transition}ms ease-in-out` }}
+          draggable={false}
+        />
+      )}
 
       {settings?.show_clock && (
         <div className="absolute right-[3vw] bottom-[3vh] rounded-full bg-black/45 px-[1.6vw] py-[0.8vh] text-[2.2vh] font-display text-white/90 backdrop-blur-sm">

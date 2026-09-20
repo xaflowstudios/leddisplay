@@ -166,6 +166,24 @@ function AdminPage() {
     };
   }, [isPrimaryAdmin]);
 
+  // Live approval portal: images submitted by others show up without a refresh.
+  useEffect(() => {
+    if (!isAdmin) return;
+    const channel = supabase
+      .channel("admin-slides-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "slides" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["display"] });
+      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "display_settings" }, () => {
+        void queryClient.invalidateQueries({ queryKey: ["display"] });
+      })
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isAdmin, queryClient]);
+
   async function signOut() {
     await queryClient.cancelQueries();
     queryClient.clear();
@@ -420,6 +438,35 @@ function SlidesTab() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Urgent image takeover: pauses the normal slideshow for a chosen length of time.
+  const [overrideMinutes, setOverrideMinutes] = useState<Record<string, string>>({});
+  const overrideUntil = settings?.override_until ?? null;
+  const overrideActive = Boolean(overrideUntil && new Date(overrideUntil).getTime() > Date.now());
+  const overrideSlide = overrideActive
+    ? (allSlides.find((s) => s.id === settings?.override_slide_id) ?? null)
+    : null;
+
+  const setOverride = useMutation({
+    mutationFn: async ({ id, seconds }: { id: string | null; seconds: number }) => {
+      const { error } = await supabase
+        .from("display_settings")
+        .update({
+          override_slide_id: id,
+          override_until: id ? new Date(Date.now() + seconds * 1000).toISOString() : null,
+        })
+        .eq("id", 1);
+      if (error) throw error;
+      return { id, seconds };
+    },
+    onSuccess: ({ id, seconds }) => {
+      toast.success(
+        id ? `Showing now for ${formatDuration(seconds)}` : "Back to the normal slideshow",
+      );
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const totalLoop = playlist
     .filter((slide) => slide.is_active)
     .reduce(
@@ -578,6 +625,28 @@ function SlidesTab() {
             </p>
           </div>
         </div>
+
+        {overrideActive && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2.5 text-sm">
+            <span className="font-medium">
+              Showing now: {overrideSlide?.title || "Urgent image"}
+            </span>
+            <span className="text-muted-foreground">
+              until {formatDateTime(overrideUntil)} · normal slideshow paused
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="ml-auto"
+              disabled={setOverride.isPending}
+              onClick={() => setOverride.mutate({ id: null, seconds: 0 })}
+            >
+              End now
+            </Button>
+          </div>
+        )}
+
+
 
         {playlist.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2.5">
@@ -749,6 +818,43 @@ function SlidesTab() {
                           {slide.is_active ? "On screen" : "Hidden"}
                         </span>
                       </label>
+
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`urgent-${slide.id}`} className="text-xs">
+                          Show now for
+                        </Label>
+                        <Input
+                          id={`urgent-${slide.id}`}
+                          type="number"
+                          min={0.5}
+                          step={0.5}
+                          inputMode="decimal"
+                          className="w-20"
+                          placeholder="5"
+                          value={overrideMinutes[slide.id] ?? ""}
+                          onChange={(e) =>
+                            setOverrideMinutes((prev) => ({ ...prev, [slide.id]: e.target.value }))
+                          }
+                        />
+                        <span className="text-xs text-muted-foreground">min</span>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={setOverride.isPending}
+                          onClick={() => {
+                            const seconds = toSeconds(overrideMinutes[slide.id] ?? "5", "minutes");
+                            if (!seconds) {
+                              toast.error("Enter how many minutes to show this image.");
+                              return;
+                            }
+                            setOverride.mutate({ id: slide.id, seconds });
+                          }}
+                        >
+                          Show now
+                        </Button>
+                      </div>
+
+
 
                       <div className="ml-auto flex items-center gap-2">
                         <Button
