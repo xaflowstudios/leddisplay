@@ -29,6 +29,7 @@ function shuffled<T>(items: T[]) {
 }
 
 export function Slideshow() {
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useQuery({
     queryKey: ["display", "public"],
     queryFn: async () => {
@@ -38,6 +39,22 @@ export function Slideshow() {
     refetchInterval: POLL_INTERVAL_MS,
     refetchOnWindowFocus: true,
   });
+
+  // Live updates, so an urgent image (or any playlist change) reaches the
+  // screen instantly instead of on the next poll.
+  useEffect(() => {
+    const refresh = () => {
+      void queryClient.invalidateQueries({ queryKey: ["display"] });
+    };
+    const channel = supabase
+      .channel("display-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "display_settings" }, refresh)
+      .on("postgres_changes", { event: "*", schema: "public", table: "slides" }, refresh)
+      .subscribe();
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   // Re-checked on a short tick so a slide's scheduled start/end time takes
   // effect the moment it arrives, without waiting for the next server poll.
