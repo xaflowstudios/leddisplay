@@ -421,48 +421,54 @@ function SlidesTab() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2.5">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <Checkbox
-                checked={pendingSelected.length === pending.length && pending.length > 0}
-                onCheckedChange={(checked) =>
-                  setPendingSelected(checked ? pending.map((s) => s.id) : [])
-                }
-                aria-label="Select all pending images"
-              />
-              <span>Select all</span>
-            </label>
-            <span className="text-xs text-muted-foreground">
-              {pendingSelected.length} selected
-            </span>
-            <div className="ml-auto flex flex-wrap gap-2">
-              <Button
-                size="sm"
-                disabled={pendingSelected.length === 0 || approveSlides.isPending}
-                onClick={() => {
-                  if (confirm(`Approve ${pendingSelected.length} selected image(s)?`)) {
-                    approveSlides.mutate(pendingSelected);
+          {isPrimaryAdmin ? (
+            <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2.5">
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <Checkbox
+                  checked={pendingSelected.length === pending.length && pending.length > 0}
+                  onCheckedChange={(checked) =>
+                    setPendingSelected(checked ? pending.map((s) => s.id) : [])
                   }
-                }}
-              >
-                <Check className="size-4" /> Approve all
-              </Button>
-              <Button
-                size="sm"
-                variant="destructive"
-                disabled={pendingSelected.length === 0 || removeSlides.isPending}
-                onClick={() => {
-                  if (confirm(`Delete ${pendingSelected.length} selected image(s)?`)) {
-                    removeSlides.mutate(
-                      pending.filter((s) => pendingSelected.includes(s.id)),
-                    );
-                  }
-                }}
-              >
-                <Trash2 className="size-4" /> Delete all
-              </Button>
+                  aria-label="Select all pending images"
+                />
+                <span>Select all</span>
+              </label>
+              <span className="text-xs text-muted-foreground">
+                {pendingSelected.length} selected
+              </span>
+              <div className="ml-auto flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  disabled={pendingSelected.length === 0 || approveSlides.isPending}
+                  onClick={() => {
+                    if (confirm(`Approve ${pendingSelected.length} selected image(s)?`)) {
+                      approveSlides.mutate(pendingSelected);
+                    }
+                  }}
+                >
+                  <Check className="size-4" /> Approve all
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={pendingSelected.length === 0 || removeSlides.isPending}
+                  onClick={() => {
+                    if (confirm(`Delete ${pendingSelected.length} selected image(s)?`)) {
+                      removeSlides.mutate(
+                        pending.filter((s) => pendingSelected.includes(s.id)),
+                      );
+                    }
+                  }}
+                >
+                  <Trash2 className="size-4" /> Delete all
+                </Button>
+              </div>
             </div>
-          </div>
+          ) : (
+            <p className="mt-4 rounded-lg border border-border px-3 py-2.5 text-sm text-muted-foreground">
+              Only the main administrator can approve these images.
+            </p>
+          )}
 
           <ul className="mt-4 space-y-3">
             {pending.map((slide) => (
