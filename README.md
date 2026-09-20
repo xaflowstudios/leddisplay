@@ -6,7 +6,7 @@ it's basically a slideshow program jisme ham apni marzi se jonsi image screen pe
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://lovableshow-admin-display.lovable.app
+**Live app**: https://displaymanager.lovable.app
 
 ## Build with Lovable
 
