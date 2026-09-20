@@ -1292,7 +1292,14 @@ function UsersTab() {
 
   const usersQuery = useQuery({
     queryKey: ["app-users"],
-    queryFn: () => listUsers(),
+    queryFn: async () => {
+      try {
+        return await listUsers();
+      } catch (error) {
+        console.error("[UsersTab] failed to load accounts", error);
+        throw error;
+      }
+    },
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["app-users"] });
