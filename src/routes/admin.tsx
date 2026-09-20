@@ -438,6 +438,35 @@ function SlidesTab() {
     onError: (error: Error) => toast.error(error.message),
   });
 
+  // Urgent image takeover: pauses the normal slideshow for a chosen length of time.
+  const [overrideMinutes, setOverrideMinutes] = useState<Record<string, string>>({});
+  const overrideUntil = settings?.override_until ?? null;
+  const overrideActive = Boolean(overrideUntil && new Date(overrideUntil).getTime() > Date.now());
+  const overrideSlide = overrideActive
+    ? (allSlides.find((s) => s.id === settings?.override_slide_id) ?? null)
+    : null;
+
+  const setOverride = useMutation({
+    mutationFn: async ({ id, seconds }: { id: string | null; seconds: number }) => {
+      const { error } = await supabase
+        .from("display_settings")
+        .update({
+          override_slide_id: id,
+          override_until: id ? new Date(Date.now() + seconds * 1000).toISOString() : null,
+        })
+        .eq("id", 1);
+      if (error) throw error;
+      return { id, seconds };
+    },
+    onSuccess: ({ id, seconds }) => {
+      toast.success(
+        id ? `Showing now for ${formatDuration(seconds)}` : "Back to the normal slideshow",
+      );
+      invalidate();
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
   const totalLoop = playlist
     .filter((slide) => slide.is_active)
     .reduce(
