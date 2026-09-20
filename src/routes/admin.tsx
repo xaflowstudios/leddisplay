@@ -626,6 +626,28 @@ function SlidesTab() {
           </div>
         </div>
 
+        {overrideActive && (
+          <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-background/40 px-3 py-2.5 text-sm">
+            <span className="font-medium">
+              Showing now: {overrideSlide?.title || "Urgent image"}
+            </span>
+            <span className="text-muted-foreground">
+              until {formatDateTime(overrideUntil)} · normal slideshow paused
+            </span>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="ml-auto"
+              disabled={setOverride.isPending}
+              onClick={() => setOverride.mutate({ id: null, seconds: 0 })}
+            >
+              End now
+            </Button>
+          </div>
+        )}
+
+
+
         {playlist.length > 0 && (
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-border px-3 py-2.5">
             <label className="flex cursor-pointer items-center gap-2 text-sm">
