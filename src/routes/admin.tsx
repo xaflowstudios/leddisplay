@@ -277,7 +277,7 @@ function useAdminData() {
 function SlidesTab() {
   const queryClient = useQueryClient();
   const { data, isLoading } = useAdminData();
-  const { user } = useAuth();
+  const { user, isPrimaryAdmin } = useAuth();
   const allSlides = data?.slides ?? [];
   const settings = data?.settings;
 
@@ -762,7 +762,7 @@ function AddSlideForm({
   nextPosition: number;
   onAdded: () => void;
 }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isPrimaryAdmin } = useAuth();
   const { data: profile } = useMyProfile(user?.id);
   const uploaderName = profile?.display_name ?? user?.email ?? "Unknown";
 
@@ -811,10 +811,11 @@ function AddSlideForm({
           duration_seconds: null,
           position: nextPosition + i,
           is_active: true,
-          // Admin uploads go live straight away; anyone else waits for approval.
-          is_approved: isAdmin,
-          approved_at: isAdmin ? new Date().toISOString() : null,
-          approved_by: isAdmin ? (user?.id ?? null) : null,
+          // Only the primary admin's own uploads go live straight away;
+          // everyone else (including other admins) waits for approval.
+          is_approved: isPrimaryAdmin,
+          approved_at: isPrimaryAdmin ? new Date().toISOString() : null,
+          approved_by: isPrimaryAdmin ? (user?.id ?? null) : null,
           // Uploader is always the signed-in account — never a free-text field.
           created_by: user?.id ?? null,
           created_by_name: uploaderName,
@@ -826,7 +827,7 @@ function AddSlideForm({
 
       const many = items.length > 1 ? `${items.length} images` : "Image";
       toast.success(
-        !isAdmin
+        !isPrimaryAdmin
           ? `${many} sent for approval`
           : startIso
             ? `${many} scheduled for the slideshow`
