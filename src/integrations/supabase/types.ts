@@ -43,6 +43,8 @@ export type Database = {
           default_duration_seconds: number
           id: number
           object_fit: string
+          override_slide_id: string | null
+          override_until: string | null
           show_clock: boolean
           shuffle: boolean
           transition_ms: number
@@ -52,6 +54,8 @@ export type Database = {
           default_duration_seconds?: number
           id?: number
           object_fit?: string
+          override_slide_id?: string | null
+          override_until?: string | null
           show_clock?: boolean
           shuffle?: boolean
           transition_ms?: number
@@ -61,12 +65,22 @@ export type Database = {
           default_duration_seconds?: number
           id?: number
           object_fit?: string
+          override_slide_id?: string | null
+          override_until?: string | null
           show_clock?: boolean
           shuffle?: boolean
           transition_ms?: number
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "display_settings_override_slide_id_fkey"
+            columns: ["override_slide_id"]
+            isOneToOne: false
+            referencedRelation: "slides"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
