@@ -476,13 +476,15 @@ function SlidesTab() {
                 key={slide.id}
                 className="flex flex-col gap-3 rounded-xl border border-border bg-background/40 p-3 sm:flex-row sm:items-center"
               >
-                <Checkbox
-                  checked={pendingSelected.includes(slide.id)}
-                  onCheckedChange={(checked) =>
-                    toggle(pendingSelected, setPendingSelected, slide.id, Boolean(checked))
-                  }
-                  aria-label="Select image"
-                />
+                {isPrimaryAdmin && (
+                  <Checkbox
+                    checked={pendingSelected.includes(slide.id)}
+                    onCheckedChange={(checked) =>
+                      toggle(pendingSelected, setPendingSelected, slide.id, Boolean(checked))
+                    }
+                    aria-label="Select image"
+                  />
+                )}
                 <div className="h-28 w-full shrink-0 overflow-hidden rounded-lg bg-black sm:h-16 sm:w-28">
                   {slide.src ? (
                     <img src={slide.src} alt="" className="h-full w-full object-cover" />
