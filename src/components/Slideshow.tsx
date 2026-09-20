@@ -81,6 +81,25 @@ export function Slideshow() {
   const current = slides[index] ?? null;
   const total = slides.length;
 
+  // An urgent image can take over the screen for a chosen length of time. While
+  // it is up the normal slideshow (and its timer) stays completely paused.
+  const overrideUntilMs = settings?.override_until
+    ? new Date(settings.override_until).getTime()
+    : 0;
+  const [, setOverrideTick] = useState(0);
+  useEffect(() => {
+    const remaining = overrideUntilMs - Date.now();
+    if (remaining <= 0) return;
+    const t = setTimeout(() => setOverrideTick((n) => n + 1), remaining + 50);
+    return () => clearTimeout(t);
+  }, [overrideUntilMs]);
+
+  const overrideSlide =
+    overrideUntilMs > Date.now() && settings?.override_slide_id
+      ? (data?.slides.find((slide) => slide.id === settings.override_slide_id) ?? null)
+      : null;
+  const overrideActive = overrideSlide !== null;
+
   const go = useCallback(
     (step: number) => {
       setIndex((prev) => {
