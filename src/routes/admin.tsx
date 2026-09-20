@@ -511,25 +511,29 @@ function SlidesTab() {
                     </p>
                   )}
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
-                  <Button
-                    size="sm"
-                    onClick={() => approveSlides.mutate([slide.id])}
-                    disabled={approveSlides.isPending}
-                  >
-                    <Check className="size-4" /> Approve
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="destructive"
-                    aria-label="Delete image"
-                    onClick={() => {
-                      if (confirm("Delete this image?")) removeSlides.mutate([slide]);
-                    }}
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
+                {(isPrimaryAdmin || slide.created_by === user?.id) && (
+                  <div className="flex shrink-0 items-center gap-2">
+                    {isPrimaryAdmin && (
+                      <Button
+                        size="sm"
+                        onClick={() => approveSlides.mutate([slide.id])}
+                        disabled={approveSlides.isPending}
+                      >
+                        <Check className="size-4" /> Approve
+                      </Button>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      aria-label="Delete image"
+                      onClick={() => {
+                        if (confirm("Delete this image?")) removeSlides.mutate([slide]);
+                      }}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
