@@ -44,15 +44,31 @@ export function useAuth() {
   });
 
   const roles = rolesQuery.data ?? [];
+  const isAdmin = roles.includes("admin");
+
+  // The primary admin is the first admin account; only they approve images.
+  const primaryAdminQuery = useQuery({
+    queryKey: ["primary-admin", userId],
+    enabled: Boolean(userId) && isAdmin,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("is_primary_admin", { _user_id: userId! });
+      if (error) throw error;
+      return Boolean(data);
+    },
+  });
 
   return {
     session,
     user: session?.user ?? null,
     roles,
-    isAdmin: roles.includes("admin"),
+    isAdmin,
+    isPrimaryAdmin: isAdmin && primaryAdminQuery.data === true,
     isDisplay: roles.includes("display"),
     loading: loadingSession || (Boolean(userId) && rolesQuery.isLoading),
-    refreshRoles: () => queryClient.invalidateQueries({ queryKey: ["roles"] }),
+    refreshRoles: () => {
+      void queryClient.invalidateQueries({ queryKey: ["roles"] });
+      void queryClient.invalidateQueries({ queryKey: ["primary-admin"] });
+    },
   };
 }
 

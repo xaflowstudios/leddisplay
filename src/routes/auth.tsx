@@ -60,6 +60,9 @@ function AuthPage() {
       if (mode === "signin") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        // Lets the primary admin know a non-admin account just signed in and
+        // would like admin access. The function ignores admins and repeats.
+        await supabase.rpc("request_admin_access");
         await queryClient.invalidateQueries();
       } else {
         const { data, error } = await supabase.auth.signUp({
