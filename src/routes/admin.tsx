@@ -131,12 +131,40 @@ export const Route = createFileRoute("/admin")({
 function AdminPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { session, isAdmin, loading, user, refreshRoles } = useAuth();
+  const { session, isAdmin, isPrimaryAdmin, loading, user, refreshRoles } = useAuth();
   const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     if (!loading && !session) void navigate({ to: "/auth", replace: true });
   }, [loading, session, navigate]);
+
+  // Live heads-up for the main administrator: someone new signed in and wants
+  // admin access. Only they can read these rows, so only they get the toast.
+  useEffect(() => {
+    if (!isPrimaryAdmin) return;
+    const seen = new Set<string>();
+    const channel = supabase
+      .channel("admin-access-requests")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "admin_access_requests" },
+        (payload) => {
+          const row = payload.new as { id: string; display_name: string | null; email: string | null };
+          if (seen.has(row.id)) return;
+          seen.add(row.id);
+          const who = row.display_name || row.email || "A new user";
+          toast.info("New user has logged in and is requesting admin access.", {
+            description: who,
+            duration: 10000,
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [isPrimaryAdmin]);
 
   async function signOut() {
     await queryClient.cancelQueries();
