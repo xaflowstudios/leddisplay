@@ -1292,7 +1292,14 @@ function UsersTab() {
 
   const usersQuery = useQuery({
     queryKey: ["app-users"],
-    queryFn: () => listUsers(),
+    queryFn: async () => {
+      try {
+        return await listUsers();
+      } catch (error) {
+        console.error("[UsersTab] failed to load accounts", error);
+        throw error;
+      }
+    },
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["app-users"] });
@@ -1402,7 +1409,9 @@ function UsersTab() {
         {usersQuery.isLoading ? (
           <p className="mt-4 text-sm text-muted-foreground">Loading accounts…</p>
         ) : usersQuery.error ? (
-          <p className="mt-4 text-sm text-destructive">Could not load accounts.</p>
+          <p className="mt-4 text-sm text-destructive">
+            Could not load accounts. {(usersQuery.error as Error).message}
+          </p>
         ) : (
           <ul className="mt-4 space-y-3">
             {(usersQuery.data ?? []).map((account) => (

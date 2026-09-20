@@ -29,24 +29,52 @@ function requireRole(value: unknown): "admin" | "display" {
   return value;
 }
 
+// Reads accounts through the caller's own session (RLS) instead of the
+// service-role admin API, so it also works on deployments where the
+// service-role key is not available to the server runtime.
 export const listAppUsers = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
+    const authed = context as unknown as {
+      supabase: {
+        from: (table: string) => {
+          select: (cols: string) => Promise<{ data: unknown; error: { message: string } | null }>;
+        };
+      };
+      userId: string;
+    };
     await assertAdmin(context as unknown as AuthedContext);
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
-    if (error) throw new Error(error.message);
+    const [profilesResult, rolesResult] = await Promise.all([
+      authed.supabase.from("profiles").select("id, display_name, email"),
+      authed.supabase.from("user_roles").select("user_id, role"),
+    ]);
 
-    const { data: roles } = await supabaseAdmin.from("user_roles").select("user_id, role");
-    const { data: profiles } = await supabaseAdmin.from("profiles").select("id, display_name");
+    if (profilesResult.error) {
+      console.error("[listAppUsers] profiles query failed", profilesResult.error);
+      throw new Error(`Accounts query failed: ${profilesResult.error.message}`);
+    }
+    if (rolesResult.error) {
+      console.error("[listAppUsers] user_roles query failed", rolesResult.error);
+      throw new Error(`Roles query failed: ${rolesResult.error.message}`);
+    }
 
-    return data.users.map((user) => ({
-      id: user.id,
-      email: user.email ?? "",
-      displayName: (profiles ?? []).find((row) => row.id === user.id)?.display_name ?? null,
-      role: (roles ?? []).find((row) => row.user_id === user.id)?.role ?? null,
-      lastSignInAt: user.last_sign_in_at ?? null,
+    const profiles = (profilesResult.data ?? []) as Array<{
+      id: string;
+      display_name: string | null;
+      email: string | null;
+    }>;
+    const roles = (rolesResult.data ?? []) as Array<{ user_id: string; role: string }>;
+
+    return profiles.map((profile) => ({
+      id: profile.id,
+      email: profile.email ?? "",
+      displayName: profile.display_name ?? null,
+      role: (roles.find((row) => row.user_id === profile.id)?.role ?? null) as
+        | "admin"
+        | "display"
+        | null,
+      lastSignInAt: null as string | null,
     }));
   });
 
