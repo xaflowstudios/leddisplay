@@ -1,0 +1,62 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1789921950428,
+      "tag": "0000_initial_signage_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1789921976193,
+      "tag": "0001_uploader_and_scheduling",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789922005063,
+      "tag": "0002_slide_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1789926817406,
+      "tag": "0003_initial_signage_schema",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1789926843137,
+      "tag": "0004_function_grants",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1789926867381,
+      "tag": "0005_uploader_and_scheduling",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1789926909456,
+      "tag": "0006_slide_approval",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1789926940482,
+      "tag": "0007_primary_admin_and_access_requests",
+      "breakpoints": true
+    }
+  ]
+}

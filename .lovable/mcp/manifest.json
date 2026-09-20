@@ -1,0 +1,262 @@
+{
+  "version": 1,
+  "sdk_version": "2.3.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://yqoxcbffeneiigehtzht.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "display-manager",
+      "version": "0.1.0",
+      "title": "Display Manager"
+    },
+    "tools": [
+      {
+        "name": "list_slides",
+        "title": "List slides",
+        "description": "List the signage slides in display order, optionally only the active ones.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "onlyActive": {
+              "description": "Return only slides currently shown on screen.",
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "add_slide",
+        "title": "Add slide",
+        "description": "Add a slide from a public image URL. Requires an admin account; display-only accounts cannot add slides.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Short label for the slide."
+            },
+            "imageUrl": {
+              "type": "string",
+              "format": "uri",
+              "description": "Public https URL of the image to show."
+            },
+            "durationSeconds": {
+              "description": "How long this slide stays on screen. Omit to use the default duration.",
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 86400
+            },
+            "position": {
+              "description": "Order in the slideshow.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "isActive": {
+              "description": "Whether the slide shows on screen. Defaults to true.",
+              "type": "boolean"
+            },
+            "scheduledStart": {
+              "description": "ISO timestamp to start showing this slide. Omit to show immediately.",
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            },
+            "scheduledEnd": {
+              "description": "ISO timestamp to stop showing this slide. Omit to never expire.",
+              "type": "string",
+              "format": "date-time",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+            }
+          },
+          "required": [
+            "title",
+            "imageUrl"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "update_slide",
+        "title": "Update slide",
+        "description": "Change a slide's title, image, duration, order, or on/off state. Requires an admin account.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Slide id from list_slides."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1
+            },
+            "imageUrl": {
+              "description": "Replacement public https image URL.",
+              "type": "string",
+              "format": "uri"
+            },
+            "durationSeconds": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 2,
+                  "maximum": 86400
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "position": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "isActive": {
+              "type": "boolean"
+            },
+            "scheduledStart": {
+              "description": "ISO timestamp to start showing this slide, or null to clear it.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "scheduledEnd": {
+              "description": "ISO timestamp to stop showing this slide, or null to clear it.",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "delete_slide",
+        "title": "Delete slide",
+        "description": "Permanently remove a slide from the slideshow. Requires an admin account.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Slide id from list_slides."
+            }
+          },
+          "required": [
+            "id"
+          ]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_display_settings",
+        "title": "Get display settings",
+        "description": "Read the screen settings: default slide duration, image fit, fade, shuffle, clock.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": null,
+        "outputSchema": null
+      },
+      {
+        "name": "update_display_settings",
+        "title": "Update display settings",
+        "description": "Change the screen settings. Requires an admin account.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "type": "object",
+          "properties": {
+            "defaultDurationSeconds": {
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 86400
+            },
+            "objectFit": {
+              "description": "How images fill the screen.",
+              "type": "string",
+              "enum": [
+                "cover",
+                "contain"
+              ]
+            },
+            "transitionMs": {
+              "description": "Fade length in milliseconds.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 10000
+            },
+            "shuffle": {
+              "type": "boolean"
+            },
+            "showClock": {
+              "type": "boolean"
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
